@@ -3,102 +3,69 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BBABAM</title>
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      max-width: 480px;
-      margin: 40px auto;
-      padding: 0 16px;
-      text-align: center;
-    }
-    #preview, #result {
-      max-width: 100%;
-      margin-top: 16px;
-      border-radius: 8px;
-    }
-    button {
-      margin-top: 12px;
-      padding: 8px 16px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    #status {
-      margin-top: 8px;
-      font-size: 14px;
-      color: #666;
-    }
-  </style>
+  <title>지금은 충전중</title>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <h1>픽셀 캐릭터 만들기</h1>
-  <p>사진을 올리면 스타듀밸리 스타일 픽셀 캐릭터로 바꿔드려요.</p>
+  <div id="app">
 
-  <input type="file" id="fileInput" accept="image/*" />
-  <br />
-  <img id="preview" hidden />
-  <br />
-  <button id="generateBtn" disabled>캐릭터 만들기</button>
-  <div id="status"></div>
-  <img id="result" hidden />
+    <section class="screen" id="screenState">
+      <h1>지금은 충전중</h1>
+      <p class="subtitle">지금 기분이 어떤가요?</p>
+      <div class="state-grid" id="stateGrid"></div>
+    </section>
 
-  <script>
-    const fileInput = document.getElementById('fileInput');
-    const preview = document.getElementById('preview');
-    const generateBtn = document.getElementById('generateBtn');
-    const statusEl = document.getElementById('status');
-    const resultEl = document.getElementById('result');
+    <section class="screen" id="screenBattery">
+      <h1>지금 배터리</h1>
+      <div class="battery-wrap">
+        <div class="battery-shell">
+          <div class="battery-fill" id="batteryFill" style="width:0%"></div>
+        </div>
+        <div class="battery-percent" id="batteryPercent"></div>
+        <div class="message-card" id="batteryMessage"></div>
+      </div>
+      <button class="btn-primary" id="goToPracticeBtn">잠깐 충전하러 가기</button>
+    </section>
 
-    let selectedBase64 = '';
-    let selectedMimeType = '';
+    <section class="screen" id="screenPractice">
+      <h1>어떻게 쉬어볼까요</h1>
+      <p class="subtitle">하고 싶은 걸 골라보세요</p>
+      <div class="practice-list" id="practiceList"></div>
+      <p class="subtitle" style="margin-bottom:12px;">얼마나 쉴까요</p>
+      <div class="duration-row">
+        <button class="duration-chip" data-min="1">1분</button>
+        <button class="duration-chip" data-min="3">3분</button>
+        <button class="duration-chip" data-min="5">5분</button>
+      </div>
+      <button class="btn-primary" id="startPracticeBtn" disabled>시작하기</button>
+    </section>
 
-    fileInput.addEventListener('change', () => {
-      const file = fileInput.files[0];
-      if (!file) return;
+    <section class="screen" id="screenTimer">
+      <div class="timer-wrap">
+        <div class="timer-ring" id="timerRing">
+          <div class="timer-ring-inner" id="timerCount">0:00</div>
+        </div>
+        <p class="cue-text" id="timerCue"></p>
+        <button class="btn-secondary" id="stopPracticeBtn">그만하기</button>
+      </div>
+    </section>
 
-      selectedMimeType = file.type;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result;
-        selectedBase64 = dataUrl.split(',')[1];
-        preview.src = dataUrl;
-        preview.hidden = false;
-        generateBtn.disabled = false;
-        resultEl.hidden = true;
-        statusEl.textContent = '';
-      };
-      reader.readAsDataURL(file);
-    });
+    <section class="screen" id="screenFinish">
+      <div class="finish-wrap" id="finishWrap">
+        <div class="finish-emoji">🔋</div>
+        <p>조금이라도 충전됐길 바라요.</p>
+        <p class="finish-log" id="finishLog"></p>
+        <div class="finish-actions">
+          <button class="btn-primary" id="restartBtn">다시 상태 고르기</button>
+          <button class="btn-secondary" id="closeBtn">그냥 쉴래요</button>
+        </div>
+      </div>
+    </section>
 
-    generateBtn.addEventListener('click', async () => {
-      generateBtn.disabled = true;
-      statusEl.textContent = '캐릭터 생성 중... (몇 초 걸릴 수 있어요)';
-      resultEl.hidden = true;
+  </div>
 
-      try {
-        const res = await fetch('/api/generate-character', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            imageBase64: selectedBase64,
-            mimeType: selectedMimeType,
-          }),
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error || '알 수 없는 오류');
-        }
-
-        resultEl.src = `data:${data.mimeType};base64,${data.imageBase64}`;
-        resultEl.hidden = false;
-        statusEl.textContent = '완성!';
-      } catch (err) {
-        statusEl.textContent = `오류: ${err.message}`;
-      } finally {
-        generateBtn.disabled = false;
-      }
-    });
-  </script>
+  <script src="js/states.js"></script>
+  <script src="js/restPractices.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
