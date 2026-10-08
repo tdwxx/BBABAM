@@ -8,6 +8,7 @@
 </head>
 <body>
   <div id="app">
+    <button class="sound-toggle" id="soundToggleBtn" aria-label="소리 켜기">🔈</button>
 
     <section class="screen" id="screenState">
       <h1>지금은 충전중</h1>
@@ -53,7 +54,7 @@
     <section class="screen" id="screenFinish">
       <div class="finish-wrap" id="finishWrap">
         <div class="finish-emoji">🔋</div>
-        <p>조금이라도 충전됐길 바라요.</p>
+        <p id="finishMessage">조금이라도 충전됐길 바라요.</p>
         <p class="finish-log" id="finishLog"></p>
         <div class="finish-actions">
           <button class="btn-primary" id="restartBtn">다시 상태 고르기</button>
@@ -66,6 +67,7 @@
 
   <script src="js/states.js"></script>
   <script src="js/restPractices.js"></script>
+  <script src="js/sound.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

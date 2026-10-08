@@ -23,6 +23,7 @@ body {
   min-height: 100vh;
   display: flex;
   justify-content: center;
+  transition: background 0.8s ease;
 }
 
 #app {
@@ -32,6 +33,22 @@ body {
   padding: 32px 20px 48px;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+.sound-toggle {
+  position: absolute;
+  top: 20px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  font-size: 15px;
+  cursor: pointer;
+  z-index: 2;
 }
 
 .screen {
@@ -256,6 +273,16 @@ h1 {
   transition: background 0.3s linear;
 }
 
+.timer-ring.breathing {
+  animation: breathe 8s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0% { transform: scale(0.88); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(0.88); }
+}
+
 .timer-ring-inner {
   width: 170px;
   height: 170px;
@@ -287,6 +314,16 @@ h1 {
 
 .finish-emoji {
   font-size: 48px;
+}
+
+.finish-emoji.pulse {
+  animation: finish-pulse 1.2s ease;
+}
+
+@keyframes finish-pulse {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .finish-log {

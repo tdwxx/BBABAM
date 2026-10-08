@@ -1,11 +1,18 @@
 const STATE_STORAGE_KEY = 'charging_state';
 const LOG_STORAGE_KEY = 'charging_log';
 
+const FINISH_MESSAGES = [
+  '조금이라도 충전됐길 바라요.',
+  '잠깐의 쉼도 충분히 의미 있어요.',
+  '여기까지 온 것만으로도 잘했어요.',
+];
+
 const session = {
   state: null,
   practiceId: null,
   duration: 3,
   timer: null,
+  breathTimer: null,
   secondsLeft: 0,
   cueIndex: 0,
 };
@@ -33,6 +40,10 @@ function renderStateCards() {
   });
 }
 
+function applyTheme(theme) {
+  document.documentElement.style.setProperty('--bg', theme || '#fdf8f3');
+}
+
 function selectState(id) {
   const s = getStateById(id);
   if (!s) return;
@@ -42,17 +53,23 @@ function selectState(id) {
   } catch (e) {
     /* storage unavailable, skip silently */
   }
+  applyTheme(s.theme);
   renderBatteryScreen(s);
   showScreen('screenBattery');
 }
 
 function renderBatteryScreen(s) {
-  document.getElementById('batteryMessage').textContent = s.message;
+  document.getElementById('batteryMessage').textContent = pickRandom(s.messages);
   document.getElementById('batteryPercent').textContent = `${s.battery}%`;
   const fill = document.getElementById('batteryFill');
-  fill.style.width = `${s.battery}%`;
-  fill.style.background = batteryColor(s.battery);
   fill.style.height = '100%';
+  fill.style.width = '0%';
+  fill.style.background = batteryColor(s.battery);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      fill.style.width = `${s.battery}%`;
+    });
+  });
 }
 
 function renderPracticeScreen() {
@@ -97,6 +114,15 @@ function startPractice() {
   showScreen('screenTimer');
   document.getElementById('timerCue').textContent = practice.cues[0];
   tickTimer(practice);
+  playStartChime();
+
+  const ring = document.getElementById('timerRing');
+  if (practice.id === 'breathing') {
+    ring.classList.add('breathing');
+    startBreathCycle();
+  } else {
+    ring.classList.remove('breathing');
+  }
 
   clearInterval(session.timer);
   session.timer = setInterval(() => {
@@ -107,6 +133,23 @@ function startPractice() {
       finishPractice(practice);
     }
   }, 1000);
+}
+
+function startBreathCycle() {
+  let phase = 'in';
+  playBreathTone(phase);
+  vibrate(120);
+  clearInterval(session.breathTimer);
+  session.breathTimer = setInterval(() => {
+    phase = phase === 'in' ? 'out' : 'in';
+    playBreathTone(phase);
+    vibrate(phase === 'in' ? 120 : [60, 40, 60]);
+  }, 4000);
+}
+
+function stopBreathCycle() {
+  clearInterval(session.breathTimer);
+  document.getElementById('timerRing').classList.remove('breathing');
 }
 
 function tickTimer(practice) {
@@ -129,13 +172,22 @@ function tickTimer(practice) {
 
 function stopPractice() {
   clearInterval(session.timer);
+  stopBreathCycle();
+  applyTheme(null);
   showScreen('screenState');
 }
 
 function finishPractice(practice) {
+  stopBreathCycle();
+  playEndChime();
   logCompletion(practice);
   showScreen('screenFinish');
+  document.getElementById('finishMessage').textContent = pickRandom(FINISH_MESSAGES);
   document.getElementById('finishLog').textContent = `지금까지 총 ${getLogCount()}번 충전했어요`;
+  const emojiEl = document.querySelector('.finish-emoji');
+  emojiEl.classList.remove('pulse');
+  void emojiEl.offsetWidth;
+  emojiEl.classList.add('pulse');
 }
 
 function logCompletion(practice) {
@@ -169,12 +221,32 @@ function resetToStart() {
   document.querySelectorAll('.duration-chip').forEach((c) => c.classList.remove('selected'));
   document.querySelector('.duration-chip[data-min="3"]').classList.add('selected');
   updateStartButton();
+  applyTheme(null);
   showScreen('screenState');
+}
+
+function renderSoundToggle() {
+  const btn = document.getElementById('soundToggleBtn');
+  const sync = () => {
+    const on = isSoundEnabled();
+    btn.textContent = on ? '🔊' : '🔈';
+    btn.setAttribute('aria-label', on ? '소리 끄기' : '소리 켜기');
+  };
+  sync();
+  btn.addEventListener('click', () => {
+    setSoundEnabled(!isSoundEnabled());
+    sync();
+    if (isSoundEnabled()) {
+      getAudioContext();
+      playTone(660, 0.2);
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   renderStateCards();
   renderPracticeScreen();
+  renderSoundToggle();
   document.querySelector('.duration-chip[data-min="3"]').classList.add('selected');
 
   document.getElementById('goToPracticeBtn').addEventListener('click', () => {
@@ -184,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('stopPracticeBtn').addEventListener('click', stopPractice);
   document.getElementById('restartBtn').addEventListener('click', resetToStart);
   document.getElementById('closeBtn').addEventListener('click', () => {
-    document.getElementById('finishWrap').textContent = '언제든 다시 와도 좋아요. 잘 쉬었어요.';
+    document.getElementById('finishMessage').textContent = '언제든 다시 와도 좋아요. 잘 쉬었어요.';
   });
 
   showScreen('screenState');
