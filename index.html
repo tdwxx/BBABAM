@@ -9,11 +9,19 @@
 <body>
   <div id="app">
     <button class="sound-toggle" id="soundToggleBtn" aria-label="소리 켜기">🔈</button>
+    <button class="review-toggle" id="reviewToggleBtn" aria-label="돌아보기">📖</button>
 
     <section class="screen" id="screenState">
       <h1>지금은 충전중</h1>
       <p class="subtitle">지금 기분이 어떤가요?</p>
       <div class="state-grid" id="stateGrid"></div>
+    </section>
+
+    <section class="screen" id="screenReview">
+      <h1>돌아보기</h1>
+      <p class="subtitle">지금까지 남긴 기록이에요</p>
+      <div class="review-list" id="reviewList"></div>
+      <button class="btn-secondary" id="reviewBackBtn">처음으로</button>
     </section>
 
     <section class="screen" id="screenBattery">
@@ -56,6 +64,13 @@
         <div class="finish-emoji">🔋</div>
         <p id="finishMessage">조금이라도 충전됐길 바라요.</p>
         <p class="finish-log" id="finishLog"></p>
+        <input
+          type="text"
+          class="note-input"
+          id="noteInput"
+          placeholder="오늘 하루, 한 줄로 남겨볼까요? (안 써도 돼요)"
+          maxlength="80"
+        />
         <div class="finish-actions">
           <button class="btn-primary" id="restartBtn">다시 상태 고르기</button>
           <button class="btn-secondary" id="closeBtn">그냥 쉴래요</button>

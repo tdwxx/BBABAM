@@ -15,6 +15,7 @@ const session = {
   breathTimer: null,
   secondsLeft: 0,
   cueIndex: 0,
+  lastLogAt: null,
 };
 
 function showScreen(id) {
@@ -184,24 +185,53 @@ function finishPractice(practice) {
   showScreen('screenFinish');
   document.getElementById('finishMessage').textContent = pickRandom(FINISH_MESSAGES);
   document.getElementById('finishLog').textContent = `지금까지 총 ${getLogCount()}번 충전했어요`;
+  document.getElementById('noteInput').value = '';
   const emojiEl = document.querySelector('.finish-emoji');
   emojiEl.classList.remove('pulse');
   void emojiEl.offsetWidth;
   emojiEl.classList.add('pulse');
 }
 
-function logCompletion(practice) {
-  let log = [];
+function readLog() {
   try {
-    log = JSON.parse(localStorage.getItem(LOG_STORAGE_KEY)) || [];
+    return JSON.parse(localStorage.getItem(LOG_STORAGE_KEY)) || [];
   } catch (e) {
-    log = [];
+    return [];
   }
-  log.push({ practiceId: practice.id, minutes: session.duration, at: Date.now() });
+}
+
+function writeLog(log) {
   try {
     localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(log));
   } catch (e) {
     /* storage unavailable, skip silently */
+  }
+}
+
+function logCompletion(practice) {
+  const log = readLog();
+  const entry = {
+    stateId: session.state ? session.state.id : null,
+    battery: session.state ? session.state.battery : null,
+    practiceId: practice.id,
+    minutes: session.duration,
+    note: '',
+    at: Date.now(),
+  };
+  log.push(entry);
+  writeLog(log);
+  session.lastLogAt = entry.at;
+}
+
+function saveNoteIfAny() {
+  if (session.lastLogAt === null) return;
+  const note = document.getElementById('noteInput').value.trim();
+  if (!note) return;
+  const log = readLog();
+  const entry = log.find((e) => e.at === session.lastLogAt);
+  if (entry) {
+    entry.note = note;
+    writeLog(log);
   }
 }
 
@@ -223,6 +253,44 @@ function resetToStart() {
   updateStartButton();
   applyTheme(null);
   showScreen('screenState');
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function formatLogDate(ts) {
+  const d = new Date(ts);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+function renderReviewScreen() {
+  const list = document.getElementById('reviewList');
+  const log = readLog().slice().reverse();
+
+  if (log.length === 0) {
+    list.innerHTML = '<p class="review-empty">아직 기록이 없어요. 쉬고 나면 여기 조금씩 쌓일 거예요.</p>';
+    return;
+  }
+
+  list.innerHTML = '';
+  log.forEach((entry) => {
+    const s = getStateById(entry.stateId);
+    const p = getPracticeById(entry.practiceId);
+    const row = document.createElement('div');
+    row.className = 'review-item';
+    const parts = [
+      `<span class="review-date">${formatLogDate(entry.at)}</span>`,
+      s ? `<span>${s.emoji} ${s.label}</span>` : '',
+      p ? `<span>${p.emoji} ${p.title} · ${entry.minutes}분</span>` : '',
+    ].filter(Boolean);
+    row.innerHTML = `<div class="review-meta">${parts.join(' · ')}</div>${
+      entry.note ? `<div class="review-note">"${escapeHtml(entry.note)}"</div>` : ''
+    }`;
+    list.appendChild(row);
+  });
 }
 
 function renderSoundToggle() {
@@ -254,9 +322,21 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('startPracticeBtn').addEventListener('click', startPractice);
   document.getElementById('stopPracticeBtn').addEventListener('click', stopPractice);
-  document.getElementById('restartBtn').addEventListener('click', resetToStart);
+  document.getElementById('restartBtn').addEventListener('click', () => {
+    saveNoteIfAny();
+    resetToStart();
+  });
   document.getElementById('closeBtn').addEventListener('click', () => {
+    saveNoteIfAny();
     document.getElementById('finishMessage').textContent = '언제든 다시 와도 좋아요. 잘 쉬었어요.';
+  });
+
+  document.getElementById('reviewToggleBtn').addEventListener('click', () => {
+    renderReviewScreen();
+    showScreen('screenReview');
+  });
+  document.getElementById('reviewBackBtn').addEventListener('click', () => {
+    showScreen('screenState');
   });
 
   showScreen('screenState');
