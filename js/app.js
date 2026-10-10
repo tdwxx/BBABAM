@@ -116,6 +116,7 @@ function startPractice() {
   document.getElementById('timerCue').textContent = practice.cues[0];
   tickTimer(practice);
   playStartChime();
+  renderAmbientRow();
 
   const ring = document.getElementById('timerRing');
   if (practice.id === 'breathing') {
@@ -174,12 +175,14 @@ function tickTimer(practice) {
 function stopPractice() {
   clearInterval(session.timer);
   stopBreathCycle();
+  stopAmbientAudio();
   applyTheme(null);
   showScreen('screenState');
 }
 
 function finishPractice(practice) {
   stopBreathCycle();
+  stopAmbientAudio();
   playEndChime();
   logCompletion(practice);
   showScreen('screenFinish');
@@ -290,6 +293,32 @@ function renderReviewScreen() {
       entry.note ? `<div class="review-note">"${escapeHtml(entry.note)}"</div>` : ''
     }`;
     list.appendChild(row);
+  });
+}
+
+function renderAmbientRow() {
+  const row = document.getElementById('ambientRow');
+  row.innerHTML = '';
+  const current = getAmbientSelection();
+
+  const noneChip = document.createElement('button');
+  noneChip.className = `ambient-chip${current ? '' : ' selected'}`;
+  noneChip.textContent = '🚫 없음';
+  noneChip.addEventListener('click', () => {
+    clearAmbientSelection();
+    renderAmbientRow();
+  });
+  row.appendChild(noneChip);
+
+  AMBIENT_SOUNDS.forEach((a) => {
+    const chip = document.createElement('button');
+    chip.className = `ambient-chip${current === a.id ? ' selected' : ''}`;
+    chip.textContent = `${a.emoji} ${a.label}`;
+    chip.addEventListener('click', () => {
+      startAmbient(a.id);
+      renderAmbientRow();
+    });
+    row.appendChild(chip);
   });
 }
 
