@@ -90,7 +90,7 @@ function makeNoiseBuffer(ctx, seconds, color) {
     for (let i = 0; i < length; i++) {
       const white = Math.random() * 2 - 1;
       last = (last + 0.02 * white) / 1.02;
-      data[i] = last * 3.5;
+      data[i] = Math.max(-1, Math.min(1, last * 1.2));
     }
   } else {
     for (let i = 0; i < length; i++) {
@@ -104,15 +104,21 @@ function startWhiteNoise(ctx) {
   const src = ctx.createBufferSource();
   src.buffer = makeNoiseBuffer(ctx, 2, 'white');
   src.loop = true;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 1500;
+  filter.Q.value = 0.3;
   const gain = ctx.createGain();
-  gain.gain.value = 0.025;
-  src.connect(gain);
+  gain.gain.value = 0.015;
+  src.connect(filter);
+  filter.connect(gain);
   gain.connect(ctx.destination);
   src.start();
   return {
     stop() {
       try { src.stop(); } catch (e) { /* already stopped */ }
       src.disconnect();
+      filter.disconnect();
       gain.disconnect();
     },
   };
@@ -123,15 +129,15 @@ function startWind(ctx) {
   src.buffer = makeNoiseBuffer(ctx, 4, 'brown');
   src.loop = true;
   const filter = ctx.createBiquadFilter();
-  filter.type = 'bandpass';
-  filter.frequency.value = 500;
-  filter.Q.value = 0.7;
+  filter.type = 'lowpass';
+  filter.frequency.value = 450;
+  filter.Q.value = 0.4;
   const gain = ctx.createGain();
-  gain.gain.value = 0.08;
+  gain.gain.value = 0.07;
   const lfo = ctx.createOscillator();
-  lfo.frequency.value = 0.07;
+  lfo.frequency.value = 0.05;
   const lfoGain = ctx.createGain();
-  lfoGain.gain.value = 300;
+  lfoGain.gain.value = 120;
   lfo.connect(lfoGain);
   lfoGain.connect(filter.frequency);
   src.connect(filter);
