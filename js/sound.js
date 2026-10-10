@@ -154,7 +154,7 @@ function startWind(ctx) {
 }
 
 const AMBIENT_SOUNDS = [
-  { id: 'wind', emoji: '🍃', label: '바람', start: startWind },
+  { id: 'wind', emoji: '✈️', label: '기내소리', start: startWind },
   { id: 'white', emoji: '📻', label: '백색소음', start: startWhiteNoise },
 ];
 
