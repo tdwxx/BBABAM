@@ -370,7 +370,8 @@ function renderSoundToggle() {
   const btn = document.getElementById('soundToggleBtn');
   const sync = () => {
     const on = isSoundEnabled();
-    btn.textContent = on ? '🔊' : '🔈';
+    btn.textContent = on ? '🔊' : '🔇';
+    btn.classList.toggle('on', on);
     btn.setAttribute('aria-label', on ? '소리 끄기' : '소리 켜기');
   };
   sync();

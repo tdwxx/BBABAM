@@ -53,6 +53,13 @@ body {
 
 .sound-toggle {
   right: 16px;
+  opacity: 0.5;
+  border: 2px solid transparent;
+}
+
+.sound-toggle.on {
+  opacity: 1;
+  border-color: var(--accent);
 }
 
 .review-toggle {
