@@ -190,6 +190,9 @@ function stopBreathCycle() {
   document.getElementById('timerRing').classList.remove('breathing');
 }
 
+const LONG_SESSION_SECONDS = 10 * 60;
+const LONG_CUE_SECONDS = 120;
+
 function tickTimer(practice) {
   const total = session.duration * 60;
   const elapsed = total - session.secondsLeft;
@@ -200,8 +203,14 @@ function tickTimer(practice) {
   const secs = session.secondsLeft % 60;
   document.getElementById('timerCount').textContent = `${mins}:${String(secs).padStart(2, '0')}`;
 
-  const cueSlot = Math.floor((elapsed / total) * practice.cues.length);
-  const nextIndex = Math.min(cueSlot, practice.cues.length - 1);
+  const lastCue = practice.cues.length - 1;
+  let nextIndex;
+  if (total > LONG_SESSION_SECONDS) {
+    // 긴 시간에는 문구를 천천히 돌려 보여주고, 마무리 문구는 마지막 1분에만 보여줘요
+    nextIndex = session.secondsLeft <= 60 ? lastCue : Math.floor(elapsed / LONG_CUE_SECONDS) % lastCue;
+  } else {
+    nextIndex = Math.min(Math.floor((elapsed / total) * practice.cues.length), lastCue);
+  }
   if (nextIndex !== session.cueIndex) {
     session.cueIndex = nextIndex;
     document.getElementById('timerCue').textContent = practice.cues[nextIndex];
