@@ -109,7 +109,7 @@ function startWhiteNoise(ctx) {
   filter.frequency.value = 1500;
   filter.Q.value = 0.3;
   const gain = ctx.createGain();
-  gain.gain.value = 0.015;
+  gain.gain.value = 0.05;
   src.connect(filter);
   filter.connect(gain);
   gain.connect(ctx.destination);
@@ -133,7 +133,7 @@ function startWind(ctx) {
   filter.frequency.value = 450;
   filter.Q.value = 0.4;
   const gain = ctx.createGain();
-  gain.gain.value = 0.07;
+  gain.gain.value = 0.25;
   const lfo = ctx.createOscillator();
   lfo.frequency.value = 0.05;
   const lfoGain = ctx.createGain();
