@@ -322,7 +322,7 @@ function renderReviewScreen() {
     const parts = [
       `<span class="review-date">${formatLogDate(entry.at)}</span>`,
       s ? `<span>${s.emoji} ${s.label}</span>` : '',
-      p ? `<span>${p.emoji} ${p.title} · ${entry.minutes}분</span>` : '',
+      p ? `<span>${p.emoji} ${p.title} · ${entry.minutes === 60 ? '1시간' : `${entry.minutes}분`}</span>` : '',
     ].filter(Boolean);
     row.innerHTML = `<div class="review-meta">${parts.join(' · ')}</div>${
       entry.note ? `<div class="review-note">"${escapeHtml(entry.note)}"</div>` : ''

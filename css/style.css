@@ -299,12 +299,13 @@ h1 {
 
 .duration-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 28px;
 }
 
 .duration-chip {
-  flex: 1;
+  flex: 1 1 auto;
   background: var(--surface);
   border: 2px solid transparent;
   border-radius: 999px;
