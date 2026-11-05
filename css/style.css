@@ -264,8 +264,18 @@ h1 {
   text-align: left;
 }
 
+.practice-card.suggested {
+  border-color: rgba(0, 0, 0, 0.07);
+}
+
 .practice-card.selected {
   border-color: var(--accent);
+}
+
+.practice-group-title {
+  font-size: 13px;
+  color: var(--text-soft);
+  margin: 6px 2px 0;
 }
 
 .practice-card .emoji {

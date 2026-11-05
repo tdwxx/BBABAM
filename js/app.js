@@ -54,6 +54,11 @@ function selectState(id) {
   } catch (e) {
     /* storage unavailable, skip silently */
   }
+  session.practiceId = s.suggested[0];
+  session.duration = s.defaultMinutes;
+  renderPracticeScreen(s);
+  markSelectedDuration();
+  updateStartButton();
   applyTheme(s.theme);
   renderBatteryScreen(s);
   showScreen('screenBattery');
@@ -73,28 +78,59 @@ function renderBatteryScreen(s) {
   });
 }
 
-function renderPracticeScreen() {
+function createPracticeCard(p, suggested) {
+  const card = document.createElement('button');
+  card.className = 'practice-card' + (suggested ? ' suggested' : '');
+  card.dataset.id = p.id;
+  card.innerHTML = `<span class="emoji">${p.emoji}</span><span class="titles"><strong>${p.title}</strong><span>${p.description}</span></span>`;
+  card.addEventListener('click', () => {
+    session.practiceId = p.id;
+    markSelectedPractice();
+    updateStartButton();
+  });
+  return card;
+}
+
+function addPracticeGroupTitle(list, text) {
+  const title = document.createElement('p');
+  title.className = 'practice-group-title';
+  title.textContent = text;
+  list.appendChild(title);
+}
+
+function renderPracticeScreen(state) {
   const list = document.getElementById('practiceList');
   list.innerHTML = '';
-  REST_PRACTICES.forEach((p) => {
-    const card = document.createElement('button');
-    card.className = 'practice-card';
-    card.dataset.id = p.id;
-    card.innerHTML = `<span class="emoji">${p.emoji}</span><span class="titles"><strong>${p.title}</strong><span>${p.description}</span></span>`;
-    card.addEventListener('click', () => {
-      session.practiceId = p.id;
-      document.querySelectorAll('.practice-card').forEach((c) => c.classList.remove('selected'));
-      card.classList.add('selected');
-      updateStartButton();
-    });
-    list.appendChild(card);
-  });
+  const suggestedIds = state ? state.suggested : [];
+  const suggested = suggestedIds.map(getPracticeById).filter(Boolean);
+  const others = REST_PRACTICES.filter((p) => !suggestedIds.includes(p.id));
 
+  if (suggested.length) {
+    addPracticeGroupTitle(list, '지금은 이런 게 잘 맞을 수 있어요');
+    suggested.forEach((p) => list.appendChild(createPracticeCard(p, true)));
+    addPracticeGroupTitle(list, '다른 쉼도 있어요');
+  }
+  others.forEach((p) => list.appendChild(createPracticeCard(p, false)));
+  markSelectedPractice();
+}
+
+function markSelectedPractice() {
+  document.querySelectorAll('.practice-card').forEach((c) => {
+    c.classList.toggle('selected', c.dataset.id === session.practiceId);
+  });
+}
+
+function markSelectedDuration() {
+  document.querySelectorAll('.duration-chip').forEach((c) => {
+    c.classList.toggle('selected', parseInt(c.dataset.min, 10) === session.duration);
+  });
+}
+
+function bindDurationChips() {
   document.querySelectorAll('.duration-chip').forEach((chip) => {
     chip.addEventListener('click', () => {
       session.duration = parseInt(chip.dataset.min, 10);
-      document.querySelectorAll('.duration-chip').forEach((c) => c.classList.remove('selected'));
-      chip.classList.add('selected');
+      markSelectedDuration();
       updateStartButton();
     });
   });
@@ -250,9 +286,8 @@ function getLogCount() {
 function resetToStart() {
   session.practiceId = null;
   session.duration = 3;
-  document.querySelectorAll('.practice-card').forEach((c) => c.classList.remove('selected'));
-  document.querySelectorAll('.duration-chip').forEach((c) => c.classList.remove('selected'));
-  document.querySelector('.duration-chip[data-min="3"]').classList.add('selected');
+  markSelectedPractice();
+  markSelectedDuration();
   updateStartButton();
   applyTheme(null);
   showScreen('screenState');
@@ -342,9 +377,10 @@ function renderSoundToggle() {
 
 document.addEventListener('DOMContentLoaded', () => {
   renderStateCards();
-  renderPracticeScreen();
+  renderPracticeScreen(null);
+  bindDurationChips();
+  markSelectedDuration();
   renderSoundToggle();
-  document.querySelector('.duration-chip[data-min="3"]').classList.add('selected');
 
   document.getElementById('goToPracticeBtn').addEventListener('click', () => {
     showScreen('screenPractice');
