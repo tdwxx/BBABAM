@@ -210,7 +210,7 @@ function startYouTube(videoId) {
         playerVars: { playsinline: 1, loop: 1, playlist: videoId, rel: 0 },
         events: {
           onReady: (e) => {
-            e.target.setVolume(40);
+            e.target.setVolume(100);
             e.target.playVideo();
           },
           onError: giveUp,
