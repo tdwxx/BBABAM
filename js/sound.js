@@ -158,6 +158,83 @@ const AMBIENT_SOUNDS = [
   { id: 'white', emoji: '📻', label: '백색소음', start: startWhiteNoise },
 ];
 
+// 유튜브 무료 음원 목록. 임베드가 허용된 영상만 넣고, 직접 한 번 재생해서 확인해요.
+// 예: { id: 'yt_rain', emoji: '🌧️', label: '빗소리', videoId: '영상ID' }
+const YOUTUBE_SOUNDS = [
+  { id: 'yt_fire', emoji: '🔥', label: '모닥불', videoId: 'N_g3AiXF-q8' },
+  { id: 'yt_rain', emoji: '🌧️', label: '빗소리', videoId: 'gZqkSSqBa-8' },
+];
+
+let ytApiPromise = null;
+
+function loadYouTubeApi() {
+  if (ytApiPromise) return ytApiPromise;
+  ytApiPromise = new Promise((resolve, reject) => {
+    if (window.YT && window.YT.Player) {
+      resolve(window.YT);
+      return;
+    }
+    window.onYouTubeIframeAPIReady = () => resolve(window.YT);
+    const script = document.createElement('script');
+    script.src = 'https://www.youtube.com/iframe_api';
+    script.onerror = () => {
+      ytApiPromise = null;
+      reject(new Error('youtube api failed to load'));
+    };
+    document.head.appendChild(script);
+  });
+  return ytApiPromise;
+}
+
+function startYouTube(videoId) {
+  const slot = document.getElementById('ytPlayerSlot');
+  const mount = document.createElement('div');
+  slot.appendChild(mount);
+  slot.hidden = false;
+  let player = null;
+  let stopped = false;
+
+  const giveUp = () => {
+    if (stopped) return;
+    clearAmbientSelection();
+    renderAmbientRow();
+  };
+
+  loadYouTubeApi()
+    .then((YT) => {
+      if (stopped) return;
+      player = new YT.Player(mount, {
+        width: 200,
+        height: 200,
+        videoId,
+        playerVars: { playsinline: 1, loop: 1, playlist: videoId, rel: 0 },
+        events: {
+          onReady: (e) => {
+            e.target.setVolume(40);
+            e.target.playVideo();
+          },
+          onError: giveUp,
+        },
+      });
+    })
+    .catch(giveUp);
+
+  return {
+    stop() {
+      stopped = true;
+      if (player && player.destroy) {
+        try { player.destroy(); } catch (e) { /* already removed */ }
+      }
+      slot.innerHTML = '';
+      slot.hidden = true;
+    },
+  };
+}
+
+YOUTUBE_SOUNDS.forEach((y) => {
+  AMBIENT_SOUNDS.push({ id: y.id, emoji: y.emoji, label: y.label, external: true, start: () => startYouTube(y.videoId) });
+});
+
 let currentAmbient = null;
 
 function getAmbientSelection() {
@@ -196,8 +273,8 @@ function startAmbient(id) {
   stopAmbientAudio();
   const def = AMBIENT_SOUNDS.find((a) => a.id === id);
   if (!def) return;
-  const ctx = getAudioContext();
-  if (!ctx) return;
+  const ctx = def.external ? null : getAudioContext();
+  if (!def.external && !ctx) return;
   currentAmbient = { id, handle: def.start(ctx) };
   setAmbientSelection(id);
 }

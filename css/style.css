@@ -374,9 +374,21 @@ h1 {
 .ambient-row {
   display: flex;
   gap: 8px;
-  overflow-x: auto;
+  flex-wrap: wrap;
+  justify-content: center;
   max-width: 100%;
   padding: 2px;
+}
+
+.yt-slot {
+  width: 200px;
+  height: 200px;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.yt-slot[hidden] {
+  display: none;
 }
 
 .ambient-chip {
