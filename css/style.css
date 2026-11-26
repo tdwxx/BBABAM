@@ -457,3 +457,151 @@ h1 {
   width: 100%;
   margin-top: 12px;
 }
+
+/* 넓은 화면(노트북, PC) */
+@media (min-width: 900px) {
+  #app {
+    max-width: 720px;
+    padding: 56px 32px 64px;
+  }
+
+  .sound-toggle,
+  .review-toggle {
+    top: 32px;
+  }
+
+  .sound-toggle {
+    right: 32px;
+  }
+
+  .review-toggle {
+    right: 78px;
+  }
+
+  h1 {
+    font-size: 28px;
+  }
+
+  .subtitle {
+    font-size: 16px;
+  }
+
+  .state-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .practice-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .practice-group-title {
+    grid-column: 1 / -1;
+  }
+
+  .duration-chip {
+    flex: 0 1 auto;
+    min-width: 96px;
+  }
+
+  .btn-primary {
+    align-self: center;
+    min-width: 320px;
+  }
+
+  .timer-ring {
+    width: 260px;
+    height: 260px;
+  }
+
+  .timer-ring-inner {
+    width: 222px;
+    height: 222px;
+    font-size: 40px;
+  }
+
+  .cue-text {
+    font-size: 19px;
+    max-width: 520px;
+  }
+}
+
+/* 높이가 낮은 화면에서는 타이머가 잘리지 않게 줄인다 */
+@media (max-height: 700px) {
+  .timer-wrap {
+    gap: 16px;
+  }
+
+  .timer-ring {
+    width: 170px;
+    height: 170px;
+  }
+
+  .timer-ring-inner {
+    width: 144px;
+    height: 144px;
+    font-size: 28px;
+  }
+
+  .yt-slot {
+    width: 160px;
+    height: 160px;
+  }
+}
+
+/* 마우스를 올렸을 때 */
+@media (hover: hover) {
+  .state-card:hover,
+  .practice-card:hover,
+  .duration-chip:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.09);
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+
+  .btn-secondary:hover {
+    color: var(--text);
+  }
+
+  .sound-toggle:hover,
+  .review-toggle:hover {
+    opacity: 1;
+  }
+}
+
+/* 키보드로 이동할 때 위치 표시 */
+button:focus-visible,
+.practice-card:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.ambient-hint {
+  margin: 0;
+  max-width: 320px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-soft);
+}
+
+.ambient-hint[hidden] {
+  display: none;
+}
+
+.review-clear {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.review-clear[hidden] {
+  display: none;
+}
+
+.subtitle-tight {
+  margin-bottom: 12px;
+}
