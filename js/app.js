@@ -1,5 +1,17 @@
-const STATE_STORAGE_KEY = 'charging_state';
-const LOG_STORAGE_KEY = 'charging_log';
+const SCREEN = {
+  STATE: 'screenState',
+  REVIEW: 'screenReview',
+  BATTERY: 'screenBattery',
+  PRACTICE: 'screenPractice',
+  TIMER: 'screenTimer',
+  FINISH: 'screenFinish',
+};
+
+const DURATIONS = [1, 3, 5, 30, 60];
+
+function formatMinutes(min) {
+  return min === 60 ? '1시간' : `${min}분`;
+}
 
 const FINISH_MESSAGES = [
   '조금이라도 충전됐길 바라요.',
@@ -16,6 +28,8 @@ const session = {
   secondsLeft: 0,
   cueIndex: 0,
   lastLogAt: null,
+  endAt: 0,
+  activePractice: null,
 };
 
 function showScreen(id) {
@@ -49,11 +63,7 @@ function selectState(id) {
   const s = getStateById(id);
   if (!s) return;
   session.state = s;
-  try {
-    localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify({ id: s.id, at: Date.now() }));
-  } catch (e) {
-    /* storage unavailable, skip silently */
-  }
+  storageSet(STATE_STORAGE_KEY, JSON.stringify({ id: s.id, at: Date.now() }));
   session.practiceId = s.suggested[0];
   session.duration = s.defaultMinutes;
   renderPracticeScreen(s);
@@ -61,7 +71,7 @@ function selectState(id) {
   updateStartButton();
   applyTheme(s.theme);
   renderBatteryScreen(s);
-  showScreen('screenBattery');
+  showScreen(SCREEN.BATTERY);
 }
 
 function renderBatteryScreen(s) {
@@ -126,8 +136,15 @@ function markSelectedDuration() {
   });
 }
 
-function bindDurationChips() {
-  document.querySelectorAll('.duration-chip').forEach((chip) => {
+function renderDurationChips() {
+  const row = document.getElementById('durationRow');
+  row.innerHTML = '';
+  DURATIONS.forEach((min) => {
+    const chip = document.createElement('button');
+    chip.className = 'duration-chip';
+    chip.dataset.min = String(min);
+    chip.textContent = formatMinutes(min);
+    row.appendChild(chip);
     chip.addEventListener('click', () => {
       session.duration = parseInt(chip.dataset.min, 10);
       markSelectedDuration();
@@ -146,9 +163,12 @@ function startPractice() {
   if (!practice) return;
 
   session.secondsLeft = session.duration * 60;
+  session.endAt = Date.now() + session.secondsLeft * 1000;
+  session.activePractice = practice;
   session.cueIndex = 0;
+  requestWakeLock();
 
-  showScreen('screenTimer');
+  showScreen(SCREEN.TIMER);
   document.getElementById('timerCue').textContent = practice.cues[0];
   tickTimer(practice);
   playStartChime();
@@ -163,14 +183,48 @@ function startPractice() {
   }
 
   clearInterval(session.timer);
-  session.timer = setInterval(() => {
-    session.secondsLeft -= 1;
-    tickTimer(practice);
-    if (session.secondsLeft <= 0) {
-      clearInterval(session.timer);
-      finishPractice(practice);
+  session.timer = setInterval(advanceTimer, 1000);
+  if (!isSoundEnabled()) {
+    showAmbientHint('소리가 꺼져 있어요. 오른쪽 위 🔇를 누르면 켜져요.');
+  }
+}
+
+// 화면이 꺼지거나 탭이 가려져도 시간이 어긋나지 않게, 끝나는 시각 기준으로 남은 시간을 계산해요
+function advanceTimer() {
+  const practice = session.activePractice;
+  if (!practice) return;
+  session.secondsLeft = Math.max(0, Math.ceil((session.endAt - Date.now()) / 1000));
+  tickTimer(practice);
+  if (session.secondsLeft <= 0) {
+    clearInterval(session.timer);
+    finishPractice(practice);
+  }
+}
+
+let wakeLock = null;
+
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator && !wakeLock) {
+      const lock = await navigator.wakeLock.request('screen');
+      if (!session.activePractice) {
+        // 요청이 끝나기 전에 쉼이 끝났거나 멈췄다면 바로 놓아줘요
+        lock.release().catch(() => {});
+        return;
+      }
+      wakeLock = lock;
+      lock.addEventListener('release', () => { if (wakeLock === lock) wakeLock = null; });
     }
-  }, 1000);
+  } catch (e) {
+    /* wake lock not available, skip */
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) {
+    wakeLock.release().catch(() => {});
+    wakeLock = null;
+  }
 }
 
 function startBreathCycle() {
@@ -218,19 +272,24 @@ function tickTimer(practice) {
 }
 
 function stopPractice() {
+  if (session.duration > 1 && !window.confirm('그만할까요? 지금까지 쉰 시간은 기록되지 않아요.')) return;
   clearInterval(session.timer);
+  session.activePractice = null;
+  releaseWakeLock();
   stopBreathCycle();
   stopAmbientAudio();
   applyTheme(null);
-  showScreen('screenState');
+  showScreen(SCREEN.STATE);
 }
 
 function finishPractice(practice) {
+  session.activePractice = null;
+  releaseWakeLock();
   stopBreathCycle();
   stopAmbientAudio();
   playEndChime();
   logCompletion(practice);
-  showScreen('screenFinish');
+  showScreen(SCREEN.FINISH);
   document.getElementById('finishMessage').textContent = pickRandom(FINISH_MESSAGES);
   document.getElementById('finishLog').textContent = `지금까지 총 ${getLogCount()}번 충전했어요`;
   document.getElementById('noteInput').value = '';
@@ -238,22 +297,6 @@ function finishPractice(practice) {
   emojiEl.classList.remove('pulse');
   void emojiEl.offsetWidth;
   emojiEl.classList.add('pulse');
-}
-
-function readLog() {
-  try {
-    return JSON.parse(localStorage.getItem(LOG_STORAGE_KEY)) || [];
-  } catch (e) {
-    return [];
-  }
-}
-
-function writeLog(log) {
-  try {
-    localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(log));
-  } catch (e) {
-    /* storage unavailable, skip silently */
-  }
 }
 
 function logCompletion(practice) {
@@ -283,15 +326,6 @@ function saveNoteIfAny() {
   }
 }
 
-function getLogCount() {
-  try {
-    const log = JSON.parse(localStorage.getItem(LOG_STORAGE_KEY)) || [];
-    return log.length;
-  } catch (e) {
-    return 0;
-  }
-}
-
 function resetToStart() {
   session.practiceId = null;
   session.duration = 3;
@@ -299,7 +333,7 @@ function resetToStart() {
   markSelectedDuration();
   updateStartButton();
   applyTheme(null);
-  showScreen('screenState');
+  showScreen(SCREEN.STATE);
 }
 
 function escapeHtml(str) {
@@ -316,6 +350,7 @@ function formatLogDate(ts) {
 function renderReviewScreen() {
   const list = document.getElementById('reviewList');
   const log = readLog().slice().reverse();
+  document.getElementById('reviewClearBtn').hidden = log.length === 0;
 
   if (log.length === 0) {
     list.innerHTML = '<p class="review-empty">아직 기록이 없어요. 쉬고 나면 여기 조금씩 쌓일 거예요.</p>';
@@ -331,7 +366,7 @@ function renderReviewScreen() {
     const parts = [
       `<span class="review-date">${formatLogDate(entry.at)}</span>`,
       s ? `<span>${s.emoji} ${s.label}</span>` : '',
-      p ? `<span>${p.emoji} ${p.title} · ${entry.minutes === 60 ? '1시간' : `${entry.minutes}분`}</span>` : '',
+      p ? `<span>${p.emoji} ${p.title} · ${formatMinutes(entry.minutes)}</span>` : '',
     ].filter(Boolean);
     row.innerHTML = `<div class="review-meta">${parts.join(' · ')}</div>${
       entry.note ? `<div class="review-note">"${escapeHtml(entry.note)}"</div>` : ''
@@ -359,6 +394,10 @@ function renderAmbientRow() {
     chip.className = `ambient-chip${current === a.id ? ' selected' : ''}`;
     chip.textContent = `${a.emoji} ${a.label}`;
     chip.addEventListener('click', () => {
+      if (!a.external && !isSoundEnabled()) {
+        setSoundEnabled(true);
+        syncSoundToggle();
+      }
       startAmbient(a.id);
       renderAmbientRow();
     });
@@ -366,18 +405,20 @@ function renderAmbientRow() {
   });
 }
 
+function syncSoundToggle() {
+  const btn = document.getElementById('soundToggleBtn');
+  const on = isSoundEnabled();
+  btn.textContent = on ? '🔊' : '🔇';
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-label', on ? '소리 끄기' : '소리 켜기');
+}
+
 function renderSoundToggle() {
   const btn = document.getElementById('soundToggleBtn');
-  const sync = () => {
-    const on = isSoundEnabled();
-    btn.textContent = on ? '🔊' : '🔇';
-    btn.classList.toggle('on', on);
-    btn.setAttribute('aria-label', on ? '소리 끄기' : '소리 켜기');
-  };
-  sync();
+  syncSoundToggle();
   btn.addEventListener('click', () => {
     setSoundEnabled(!isSoundEnabled());
-    sync();
+    syncSoundToggle();
     if (isSoundEnabled()) {
       getAudioContext();
       playTone(660, 0.2);
@@ -388,12 +429,31 @@ function renderSoundToggle() {
 document.addEventListener('DOMContentLoaded', () => {
   renderStateCards();
   renderPracticeScreen(null);
-  bindDurationChips();
+  renderDurationChips();
   markSelectedDuration();
   renderSoundToggle();
 
   document.getElementById('goToPracticeBtn').addEventListener('click', () => {
-    showScreen('screenPractice');
+    showScreen(SCREEN.PRACTICE);
+  });
+  document.getElementById('batteryBackBtn').addEventListener('click', () => {
+    applyTheme(null);
+    showScreen(SCREEN.STATE);
+  });
+  document.getElementById('practiceBackBtn').addEventListener('click', () => {
+    showScreen(SCREEN.BATTERY);
+  });
+  document.getElementById('reviewClearBtn').addEventListener('click', () => {
+    if (!window.confirm('지금까지의 기록을 모두 지울까요? 되돌릴 수 없어요.')) return;
+    storageRemove(LOG_STORAGE_KEY);
+    session.lastLogAt = null;
+    renderReviewScreen();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && session.activePractice) {
+      advanceTimer();
+      requestWakeLock();
+    }
   });
   document.getElementById('startPracticeBtn').addEventListener('click', startPractice);
   document.getElementById('stopPracticeBtn').addEventListener('click', stopPractice);
@@ -408,11 +468,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('reviewToggleBtn').addEventListener('click', () => {
     renderReviewScreen();
-    showScreen('screenReview');
+    showScreen(SCREEN.REVIEW);
   });
   document.getElementById('reviewBackBtn').addEventListener('click', () => {
-    showScreen('screenState');
+    showScreen(SCREEN.STATE);
   });
 
-  showScreen('screenState');
+  showScreen(SCREEN.STATE);
+  bindKeyboardShortcuts();
 });

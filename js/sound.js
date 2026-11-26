@@ -1,5 +1,3 @@
-const SOUND_STORAGE_KEY = 'sound_enabled';
-
 let audioCtx = null;
 
 function getAudioContext() {
@@ -15,19 +13,11 @@ function getAudioContext() {
 }
 
 function isSoundEnabled() {
-  try {
-    return localStorage.getItem(SOUND_STORAGE_KEY) === 'true';
-  } catch (e) {
-    return false;
-  }
+  return storageGet(SOUND_STORAGE_KEY) === 'true';
 }
 
 function setSoundEnabled(enabled) {
-  try {
-    localStorage.setItem(SOUND_STORAGE_KEY, String(enabled));
-  } catch (e) {
-    /* storage unavailable, skip silently */
-  }
+  storageSet(SOUND_STORAGE_KEY, String(enabled));
 }
 
 function playTone(freq, duration, delay = 0) {
@@ -78,8 +68,6 @@ function vibrate(pattern) {
 }
 
 /* ---------- 배경 자연음 (합성) ---------- */
-
-const AMBIENT_STORAGE_KEY = 'ambient_sound';
 
 function makeNoiseBuffer(ctx, seconds, color) {
   const length = Math.floor(ctx.sampleRate * seconds);
@@ -186,6 +174,17 @@ function loadYouTubeApi() {
   return ytApiPromise;
 }
 
+let ambientHintTimer = null;
+
+function showAmbientHint(text) {
+  const hint = document.getElementById('ambientHint');
+  if (!hint) return;
+  hint.textContent = text;
+  hint.hidden = false;
+  clearTimeout(ambientHintTimer);
+  ambientHintTimer = setTimeout(() => { hint.hidden = true; }, 8000);
+}
+
 function startYouTube(videoId) {
   const slot = document.getElementById('ytPlayerSlot');
   const mount = document.createElement('div');
@@ -194,10 +193,17 @@ function startYouTube(videoId) {
   let player = null;
   let stopped = false;
 
-  const giveUp = () => {
+  const giveUp = (err) => {
     if (stopped) return;
+    console.warn('youtube ambient failed', err && err.data !== undefined ? err.data : err);
     clearAmbientSelection();
     renderAmbientRow();
+    const isFile = window.location.protocol === 'file:';
+    showAmbientHint(
+      isFile
+        ? '이 소리는 파일로 열면 나오지 않아요. 인터넷 주소(http)로 열어 보세요. 다른 소리를 골라도 좋아요.'
+        : '지금은 이 소리를 불러오지 못했어요. 다른 소리를 골라볼까요?'
+    );
   };
 
   loadYouTubeApi()
@@ -238,22 +244,14 @@ YOUTUBE_SOUNDS.forEach((y) => {
 let currentAmbient = null;
 
 function getAmbientSelection() {
-  try {
-    return localStorage.getItem(AMBIENT_STORAGE_KEY) || null;
-  } catch (e) {
-    return null;
-  }
+  return storageGet(AMBIENT_STORAGE_KEY) || null;
 }
 
 function setAmbientSelection(id) {
-  try {
-    if (id) {
-      localStorage.setItem(AMBIENT_STORAGE_KEY, id);
-    } else {
-      localStorage.removeItem(AMBIENT_STORAGE_KEY);
-    }
-  } catch (e) {
-    /* storage unavailable, skip silently */
+  if (id) {
+    storageSet(AMBIENT_STORAGE_KEY, id);
+  } else {
+    storageRemove(AMBIENT_STORAGE_KEY);
   }
 }
 

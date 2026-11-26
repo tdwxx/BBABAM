@@ -4,6 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>지금은 충전중</title>
+  <meta name="description" content="번아웃으로 지친 날, 짧게 쉬는 연습을 해보는 곳. 로그인 없이 바로 쓸 수 있어요." />
+  <meta name="theme-color" content="#fdf8f3" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="지금은 충전중" />
+  <meta property="og:description" content="번아웃으로 지친 날, 짧게 쉬는 연습을 해보는 곳. 로그인 없이 바로 쓸 수 있어요." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%8B%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -21,6 +27,7 @@
       <h1>돌아보기</h1>
       <p class="subtitle">지금까지 남긴 기록이에요</p>
       <div class="review-list" id="reviewList"></div>
+      <button class="btn-secondary review-clear" id="reviewClearBtn" hidden>기록 모두 지우기</button>
       <button class="btn-secondary" id="reviewBackBtn">처음으로</button>
     </section>
 
@@ -34,21 +41,17 @@
         <div class="message-card" id="batteryMessage"></div>
       </div>
       <button class="btn-primary" id="goToPracticeBtn">잠깐 충전하러 가기</button>
+      <button class="btn-secondary" id="batteryBackBtn">뒤로</button>
     </section>
 
     <section class="screen" id="screenPractice">
       <h1>어떻게 쉬어볼까요</h1>
       <p class="subtitle">하고 싶은 걸 골라보세요</p>
       <div class="practice-list" id="practiceList"></div>
-      <p class="subtitle" style="margin-bottom:12px;">얼마나 쉴까요</p>
-      <div class="duration-row">
-        <button class="duration-chip" data-min="1">1분</button>
-        <button class="duration-chip" data-min="3">3분</button>
-        <button class="duration-chip" data-min="5">5분</button>
-        <button class="duration-chip" data-min="30">30분</button>
-        <button class="duration-chip" data-min="60">1시간</button>
-      </div>
+      <p class="subtitle subtitle-tight">얼마나 쉴까요</p>
+      <div class="duration-row" id="durationRow"></div>
       <button class="btn-primary" id="startPracticeBtn" disabled>시작하기</button>
+      <button class="btn-secondary" id="practiceBackBtn">뒤로</button>
     </section>
 
     <section class="screen" id="screenTimer">
@@ -58,6 +61,7 @@
         </div>
         <p class="cue-text" id="timerCue"></p>
         <div class="ambient-row" id="ambientRow"></div>
+        <p class="ambient-hint" id="ambientHint" hidden></p>
         <div class="yt-slot" id="ytPlayerSlot" hidden></div>
         <button class="btn-secondary" id="stopPracticeBtn">그만하기</button>
       </div>
@@ -84,9 +88,11 @@
 
   </div>
 
+  <script src="js/storage.js"></script>
   <script src="js/states.js"></script>
   <script src="js/restPractices.js"></script>
   <script src="js/sound.js"></script>
+  <script src="js/keyboard.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
